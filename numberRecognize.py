@@ -19,19 +19,23 @@ class Conv3x3:
             for j in range(w - 2):
                 im_region = image[i:(i + 3), j:(j + 3)]
                 yield im_region, i, j
-                
+     
+     # input 为 image，即输入数据
+        # output 为输出框架，默认都为 0，都为 1 也可以，反正后面会覆盖
+        # input: 28x28
+        # output: 26x26x8
     def forward(self, input):
         # 28x28
-        self.last_input = input
-        
+        self.last_input = input      
         # input_im: matrix of image
         h, w = input.shape
         output = np.zeros((h - 2, w - 2, self.num_filters))
         
         for im_region, i, j in self.iterate_regions(input):
             output[i, j] = np.sum(im_region * self.filters, axis=(1, 2))
-            
+             # 卷积运算，点乘再相加，ouput[i, j] 为向量，8 层
         return output
+         # 最后将输出数据返回，便于下一层的输入使用
     
     def backprop(self, d_L_d_out, learn_rate):
         # d_L_d_out: the loss gradient for this layer's outputs
@@ -111,12 +115,12 @@ class MaxPool2:
         
 class Softmax:
     # A standard fully-connected layer with softmax activation.
-    
+       
     def __init__(self, input_len, nodes):
         # We divide by input_len to reduce the variance of our initial values
         # input_len: length of input nodes
         # nodes: lenght of ouput nodes
-        
+        # 构建权重矩阵，初始化随机数，不能太大       
         self.weights = np.random.randn(input_len, nodes) / input_len
         self.biases = np.zeros(nodes)
 
@@ -128,6 +132,11 @@ class Softmax:
         '''
         # 3d
         self.last_input_shape = input.shape
+        
+        # input: 13x13x8 = 1352
+        # self.weights: (1352, 10)
+        # 以上叉乘之后为 向量，1352个节点与对应的权重相乘再加上bias得到输出的节点
+        # totals: 向量, 10
         
         # 3d to 1d
         input = input.flatten()
@@ -224,8 +233,8 @@ def forward(image, label):
     out = softmax.forward(out)
 
     # Calculate cross-entropy loss and accuracy. np.log() is the natural log.
-    loss = -np.log(out[label])
-    acc = 1 if np.argmax(out) == label else 0
+    loss = -np.log(out[label])# 损失函数的计算只与 label 的数有关，相当于索引
+    acc = 1 if np.argmax(out) == label else 0# 如果 softmax 输出的最大值就是 label 的值，表示正确，否则错误
 
     return out, loss, acc
     
@@ -239,7 +248,7 @@ def train(im, label, lr=.005):
     
     # Calculate intial gradient
     gradient = np.zeros(10)
-    gradient[label] = -1 / out[label]
+    gradient[label] = -1 / out[label]#导数的计算，结合交叉熵公式，out[lable]是正确标签对应的分值
     
     # Backprop
     gradient = softmax.backprop(gradient, lr)
@@ -256,6 +265,7 @@ for epoch in range(3):
     print('--- Epoch %d ---' % (epoch + 1))
     
     # Shuffle the training data
+    #打乱训练集的顺序
     permutation = np.random.permutation(len(train_images))
     train_images = train_images[permutation]
     train_labels = train_labels[permutation]
