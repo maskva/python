@@ -40,13 +40,16 @@ class Conv3x3:
     def backprop(self, d_L_d_out, learn_rate):
         # d_L_d_out: the loss gradient for this layer's outputs
         # learn_rate: a float
+         # 初始化一组为 0 的 gradient，3x3x8
         d_L_d_filters = np.zeros(self.filters.shape)
         
+        # im_region，一个个 3x3 小矩阵
         for im_region, i, j in self.iterate_regions(self.last_input):
             for f in range(self.num_filters):
                 # d_L_d_filters[f]: 3x3 matrix
                 # d_L_d_out[i, j, f]: num
                 # im_region: 3x3 matrix in image
+                # 按 f 分层计算，一次算一层，然后累加起来   
                 d_L_d_filters[f] += d_L_d_out[i, j, f] * im_region
                 
         # Update filters
@@ -82,7 +85,7 @@ class MaxPool2:
         Performs a forward pass of the maxpool layer using the given input.
         Returns a 3d numpy array with dimensions (h / 2, w / 2, num_filters).
         - input is a 3d numpy array with dimensions (h, w, num_filters)
-        '''
+        ''' # 初始化一组为 0 的 gradient，3x3x8
         # 26x26x8
         self.last_input = input
         
@@ -97,13 +100,18 @@ class MaxPool2:
         
     def backprop(self, d_L_d_out):
         # d_L_d_out: the loss gradient for the layer's outputs
-        
+ 
+        # 池化层输入数据，26x26x8，默认初始化为 0
         d_L_d_input = np.zeros(self.last_input.shape)
         
+        # 每一个 im_region 都是一个 3x3x8 的8层小矩阵
+        # 修改 max 的部分，首先查找 max
         for im_region, i, j in self.iterate_regions(self.last_input):
             h, w, f = im_region.shape
+            # 获取 im_region 里面最大值的索引向量
             amax = np.amax(im_region, axis=(0, 1))
             
+            # 遍历整个 im_region，对于传递下去的像素点，修改 gradient 为 loss 对 output 的gradient
             for i2 in range(h):
                 for j2 in range(w):
                     for f2 in range(f):
@@ -177,11 +185,11 @@ class Softmax:
             d_out_d_t[i] = t_exp[i] * (S - t_exp[i]) / (S ** 2)
         
             # Gradients of out[i] against totals
-            # gradients to every weight in every node
-            # this is not the final results
+           # d_t_d_w 的结果是 softmax 层的输入数据，1352 个元素的向量
+            # 不是最终的结果，最终结果是 2d 矩阵，1352x10
             d_t_d_w = self.last_input  # vector
             d_t_d_b = 1
-            # 1000 x 10
+            # d_t_d_input 的结果是 weights 值# 池化层输入数据，26x26x8，默认初始化为 0，2d 矩阵，1352x10
             d_t_d_inputs = self.weights
         
             # Gradients of loss against totals
@@ -189,10 +197,12 @@ class Softmax:
             d_L_d_t = gradient * d_out_d_t
         
             # Gradients of loss against weights/biases/input
-            # (1000, 1) @ (1, 10) to (1000, 10)
+            # np.newaxis 可以帮助一维向量变成二维矩阵
+             # (1352, 1) @ (1, 10) to (1352, 10)
+            # .T:转置
             d_L_d_w = d_t_d_w[np.newaxis].T @ d_L_d_t[np.newaxis]
             d_L_d_b = d_L_d_t * d_t_d_b
-            # (1000, 10) @ (10, 1)
+            # (1352, 10) @ (10, 1) to (1352, 1)
             d_L_d_inputs = d_t_d_inputs @ d_L_d_t
         
             # Update weights / biases
@@ -259,7 +269,7 @@ def train(im, label, lr=.005):
     
 print('MNIST CNN initialized!')
 
-
+但是可以.T 反转轴的顺序，而不是切换最后两个轴。也就是说，如果您的数组x是3-D，x.T则与相同x.transpose((2, 1, 0))。如果要切换最后两个轴，则可以这样做x.transpose((0, 2, 1))。
 # Train the CNN for 3 epochs
 for epoch in range(3):
     print('--- Epoch %d ---' % (epoch + 1))
